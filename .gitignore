@@ -1,0 +1,10 @@
+test_engine.exe
+test_*.exe
+test_*.json
+*.obj
+*.o
+*.pdb
+*.lib
+*.exp
+__pycache__/
+tmp/
