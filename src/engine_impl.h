@@ -594,7 +594,8 @@ static void sg_run_single_case(SgArena *a, SgMdScratch *sc, const SgCaseInput *i
     }
 
     /* 5. tags */
-    uint32_t max_tags_est = post_cnt * 6 + 32;
+    uint32_t max_tags_est = 32;
+    for (uint32_t k = 0; k < post_cnt; k++) max_tags_est += sources[post_order[k]].fm.tag_count;
     SgTagObj *raw_tags = (SgTagObj *)sg_arena_alloc(a, max_tags_est * sizeof(SgTagObj), 8);
     uint32_t *tag_post_caps = (uint32_t *)sg_arena_alloc(a, max_tags_est * sizeof(uint32_t), 4);
     uint32_t tag_cnt = 0;
@@ -1023,13 +1024,7 @@ void sg_solve_all_scalar(uint8_t *in_buf, size_t in_len, SgOutBuf *ob)
     static uint8_t md_join_backing[64u * 1024u] __attribute__((aligned(64)));
     SgMdScratch sc = {0};
     sg_buf_init_static(&sc.html_buf, md_html_backing, sizeof(md_html_backing));
-    /* Mark backing static? Simplest: let SgBuf always allocate growable or just keep sc in mmap'd buffers if grown */
-    /* Wait: md_html_backing is static, so initialize via mmap 256K once or track is_static! */
-    sc.html_buf.data = (uint8_t *)sg_buf_mmap(256u * 1024u);
-    sc.html_buf.cap = 256u * 1024u;
-    sc.join_buf.data = (uint8_t *)sg_buf_mmap(64u * 1024u);
-    sc.join_buf.cap = 64u * 1024u;
-    (void)md_html_backing; (void)md_join_backing;
+    sg_buf_init_static(&sc.join_buf, md_join_backing, sizeof(md_join_backing));
 
     const uint8_t *p = in_buf;
     const uint8_t *end = in_buf + in_len;
@@ -1078,4 +1073,6 @@ void sg_solve_all_scalar(uint8_t *in_buf, size_t in_len, SgOutBuf *ob)
 
     sg_ob_putc(ob, ']');
     sg_ob_flush(ob);
+    if (sc.html_buf.owns_heap) sg_buf_free_raw(sc.html_buf.data, sc.html_buf.cap);
+    if (sc.join_buf.owns_heap) sg_buf_free_raw(sc.join_buf.data, sc.join_buf.cap);
 }
